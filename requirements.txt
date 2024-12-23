@@ -1,0 +1,7 @@
+pdfplumber
+protobuf
+PyPDF2
+python-dotenv
+streamlit
+streamlit_lottie
+google-generativeai

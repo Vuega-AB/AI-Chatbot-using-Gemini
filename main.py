@@ -46,9 +46,6 @@ def process_image(uploaded_image):
     try:
         # Load the image
         image = Image.open(uploaded_image)
-
-        # Convert the image to black and white (grayscale)
-        image = image.convert("L")  # "L" mode converts the image to grayscale
         
         # Convert the grayscale image to bytes
         buffered = BytesIO()

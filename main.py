@@ -15,6 +15,11 @@ fetched_api_key = os.getenv("API_Key")
 genai.configure(api_key=fetched_api_key)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
+# Configure the page
+st.set_page_config(
+    page_title="AI Chatbot Assistant",
+    page_icon="🤖"
+)
 
 def process_pdf(uploaded_file):
     text = ""
@@ -58,8 +63,6 @@ def process_image(uploaded_image):
         st.error(f"An error occurred while processing the image: {e}")
         return None
 
-
-
 def send_message_to_genai(prompt, pdf_text=None, image_part=None):
     prompt_parts = [prompt]
     
@@ -75,7 +78,6 @@ def send_message_to_genai(prompt, pdf_text=None, image_part=None):
     except Exception as e:
         st.error(f"An error occurred while sending to GenAI: {e}")
         return None
-
 
 def handle_chat_interaction(prompt, messages_container, pdf_text=None, image_part=None):
     if not prompt.strip():
@@ -97,7 +99,6 @@ def handle_chat_interaction(prompt, messages_container, pdf_text=None, image_par
             messages_container.chat_message("user").write(message['text'])
         else:
             messages_container.chat_message("assistant").write(message['text'])
-
 
 def main():
     st.title("AI Chatbot with PDF and Image Processing")
@@ -131,7 +132,6 @@ def main():
 
         if user_prompt:
             handle_chat_interaction(user_prompt, messages, pdf_text, image_part)
-
 
 if __name__ == "__main__":
     main()

@@ -2,8 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 
-def get_links_from_start_page(base_url):
-    """Extract all internal links from the start page only."""
+def get_all_links(base_url):
+    """Extract all navigable links from the given page."""
     try:
         response = requests.get(base_url, headers={"User-Agent": "Mozilla/5.0"})
         response.raise_for_status()
@@ -12,18 +12,18 @@ def get_links_from_start_page(base_url):
         return set()
 
     soup = BeautifulSoup(response.text, "html.parser")
-    page_links = set()
+    all_links = set()
 
     for link in soup.find_all("a", href=True):
         href = link["href"]
         full_link = urljoin(base_url, href)
         parsed_link = urlparse(full_link)
 
-        # Ensure links are internal and not PDFs themselves
-        if parsed_link.netloc == urlparse(base_url).netloc and not full_link.endswith(".pdf"):
-            page_links.add(full_link)
+        # Ignore links that navigate to external sites
+        if parsed_link.netloc == urlparse(base_url).netloc:
+            all_links.add(full_link)
 
-    return page_links
+    return all_links
 
 def extract_pdfs(url):
     """Extract all PDF links from a given page."""
@@ -44,27 +44,31 @@ def extract_pdfs(url):
 
     return pdf_links
 
-def scrape_pdfs_from_start_page(start_url):
-    """Extract links from the start page and check only the next level for PDFs."""
+def scrape_pdfs(start_url):
+    """Crawl pages and collect all PDF links."""
     visited_pages = set()
     pdf_links = set()
+    pages_to_visit = {start_url}
 
-    # Step 1: Extract links from the start page
-    pages_to_visit = get_links_from_start_page(start_url)
-    print(f"Found {len(pages_to_visit)} navigable links on the start page.")
+    while pages_to_visit:
+        current_page = pages_to_visit.pop()
+        if current_page in visited_pages:
+            continue
 
-    # Step 2: Visit each extracted link and check for PDFs
-    for page in pages_to_visit:
-        if page not in visited_pages:
-            print(f"Checking for PDFs in: {page}")
-            visited_pages.add(page)
-            pdf_links.update(extract_pdfs(page))
+        visited_pages.add(current_page)
+        print(f"Visiting: {current_page}")
 
-    # Step 3: Print results
+        # Extract PDFs
+        pdf_links.update(extract_pdfs(current_page))
+
+        # Find more pages to visit
+        new_links = get_all_links(current_page)
+        pages_to_visit.update(new_links - visited_pages)
+
     print(f"\nFound {len(pdf_links)} PDF links:")
     for pdf in pdf_links:
         print(pdf)
 
 # Example usage
 start_url = "https://www.imy.se/tillsyner/"  # Change this to any starting URL
-scrape_pdfs_from_start_page(start_url)
+scrape_pdfs(start_url)

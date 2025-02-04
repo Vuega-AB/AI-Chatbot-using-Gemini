@@ -38,7 +38,7 @@ if os.path.exists(DB_PATH):
 # Streamlit UI Configuration
 st.set_page_config(page_title="RAG Chatbot", page_icon="🤖", layout="wide")
 
-st.title("🤖 AI Chatbot with DeepSeek-V3")
+st.title("🤖 AI Chatbot with Multiple Models")
 st.markdown("💡 **Ask me anything based on your uploaded PDFs!**")
 
 # Extract Text from PDFs
@@ -68,16 +68,16 @@ def query_vector_database(query_text):
     results = vectorstore.similarity_search(query_text, k=3)
     return " ".join([doc.page_content for doc in results])
 
-# Generate Answers with DeepSeek-V3
-def generate_answer_with_deepseek(context, question):
+# Generate Answers with Selected Model
+def generate_answer_with_model(model, context, question, temperature):
     response = client.chat.completions.create(
-        model="deepseek-ai/DeepSeek-V3",
+        model=model,
         messages=[
             {"role": "system", "content": "Use the provided context to answer the user's question."},
             {"role": "user", "content": f"Context: {context}. Question: {question}"}
         ],
         max_tokens=300,
-        temperature=0.7
+        temperature=temperature
     )
     return response.choices[0].message.content.strip()
 
@@ -85,6 +85,16 @@ def generate_answer_with_deepseek(context, question):
 with st.sidebar:
     st.header("📂 Upload PDFs")
     uploaded_files = st.file_uploader("Choose PDF files", type=["pdf"], accept_multiple_files=True)
+    
+    st.header("⚙️ Model Selection")
+    model_options = [
+        "deepseek-ai/DeepSeek-V3",
+        "mistralai/Mistral-7B-Instruct",
+        "meta-llama/Llama-3-8B-Instruct"
+    ]
+    selected_model = st.selectbox("Choose an AI Model", model_options)
+    
+    temperature = st.slider("Set Temperature", min_value=0.0, max_value=1.0, value=0.7, step=0.1)
 
 if uploaded_files:
     st.success("✅ PDFs uploaded successfully!")
@@ -125,7 +135,7 @@ if user_query:
 
     # Generate AI response
     with st.spinner("🤖 Generating response..."):
-        answer = generate_answer_with_deepseek(retrieved_context, user_query)
+        answer = generate_answer_with_model(selected_model, retrieved_context, user_query, temperature)
 
     # Save AI response
     st.session_state.messages.append({"role": "assistant", "content": answer})

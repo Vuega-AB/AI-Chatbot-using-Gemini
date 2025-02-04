@@ -31,16 +31,22 @@ if not os.path.exists(DB_PATH):
 
 vectorstore = None  # Initialize empty vectorstore
 
+# Load stored vectorstore if exists
+if os.path.exists(DB_PATH):
+    vectorstore = Chroma(persist_directory=DB_PATH, embedding_function=embedding_function)
+
 # Streamlit UI Configuration
 st.set_page_config(page_title="RAG Chatbot", page_icon="🤖", layout="wide")
 
 st.title("🤖 AI Chatbot with DeepSeek-V3")
-st.markdown("💡 **Ask me anything based on your uploaded PDF!**")
+st.markdown("💡 **Ask me anything based on your uploaded PDFs!**")
 
-# Extract Text from PDF
-def extract_text_from_pdf(pdf_file):
-    reader = PdfReader(pdf_file)
-    text = "".join(page.extract_text() or "" for page in reader.pages)
+# Extract Text from PDFs
+def extract_text_from_pdfs(pdf_files):
+    text = ""
+    for pdf_file in pdf_files:
+        reader = PdfReader(pdf_file)
+        text += "".join(page.extract_text() or "" for page in reader.pages)
     return text.strip()
 
 # Split Text into Chunks
@@ -57,7 +63,7 @@ def store_embeddings(chunks):
 # Retrieve Relevant Chunks
 def query_vector_database(query_text):
     if vectorstore is None:
-        return "⚠️ No database found. Please upload a PDF first!"
+        return "⚠️ No database found. Please upload PDFs first!"
     
     results = vectorstore.similarity_search(query_text, k=3)
     return " ".join([doc.page_content for doc in results])
@@ -70,21 +76,21 @@ def generate_answer_with_deepseek(context, question):
             {"role": "system", "content": "Use the provided context to answer the user's question."},
             {"role": "user", "content": f"Context: {context}. Question: {question}"}
         ],
-        max_tokens=200,
+        max_tokens=300,
         temperature=0.7
     )
     return response.choices[0].message.content.strip()
 
 # Streamlit Sidebar
 with st.sidebar:
-    st.header("📂 Upload a PDF")
-    uploaded_file = st.file_uploader("Choose a PDF file", type=["pdf"])
+    st.header("📂 Upload PDFs")
+    uploaded_files = st.file_uploader("Choose PDF files", type=["pdf"], accept_multiple_files=True)
 
-if uploaded_file:
-    st.success("✅ PDF uploaded successfully!")
+if uploaded_files:
+    st.success("✅ PDFs uploaded successfully!")
 
     with st.spinner("📖 Extracting text..."):
-        pdf_text = extract_text_from_pdf(uploaded_file)
+        pdf_text = extract_text_from_pdfs(uploaded_files)
 
     with st.spinner("✂️ Splitting text into chunks..."):
         chunks = split_text_into_chunks(pdf_text)
@@ -106,11 +112,12 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # User Input
-user_query = st.chat_input("Type your question here...")
-
+user_query = st.chat_input("Type your question here...", key="unique_chat_input")
 if user_query:
-    # Save user message
+    # Save user message before displaying
     st.session_state.messages.append({"role": "user", "content": user_query})
+    with st.chat_message("user"):
+        st.markdown(user_query)
 
     # Retrieve relevant context
     with st.spinner("🔍 Searching relevant information..."):

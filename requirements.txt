@@ -8,3 +8,4 @@ tiktoken
 together
 openai
 langchain
+bs4
